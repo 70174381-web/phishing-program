@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Auth Required](https://img.shields.io/badge/authorization-required--before--use-orange)
 
-> **⚠️ Authorization required.** This repository contains templates and tooling for **authorized, internal security awareness simulations only**. Nothing here should be run against any inbox without written sign-off from Leadership, IT/Security, HR, and Legal/Compliance. Read [`docs/rules-of-engagement-template.md`](docs/rules-of-engagement-template.md) first.
+> **⚠️ Authorization required.** This repository contains templates and tooling for **authorized, internal security awareness simulations only**. Nothing here should be run against any inbox without written sign-off from Leadership, IT/Security, HR, and Legal/Compliance. Read [`docs/rules-of-engagement-template.md`](https://github.com/70174381-web/phishing-program/blob/main/Rules%20of%20engagement%20template.md) first.
 
 ---
 
@@ -163,7 +163,7 @@ python scripts/generate_report.py \
 - **No individual-level public reporting** — aggregate by department.
 - **Governed by Pakistan's PECA 2016** — get Legal sign-off before launch.
 
-See [`docs/rules-of-engagement-template.md`](docs/rules-of-engagement-template.md) and Section 11 of the full program overview.
+See [`docs/rules-of-engagement-template.md`](https://github.com/70174381-web/phishing-program/blob/main/Rules%20of%20engagement%20template.md) and Section 11 of the full program overview.
 
 ---
 
