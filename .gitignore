@@ -1,0 +1,53 @@
+# ── Secrets & credentials ──────────────────────────────────────────────────
+.env
+.env.*
+*.key
+*.pem
+*.crt
+*.p12
+config.local.json
+secrets.json
+
+# ── GoPhish runtime files ───────────────────────────────────────────────────
+gophish.db
+gophish_admin.crt
+gophish_admin.key
+gophish_phish.crt
+gophish_phish.key
+
+# ── Real target / results data (never commit these) ────────────────────────
+campaigns/targets-*.csv
+campaigns/real-*.csv
+results/
+reports/wave-*.md
+reports/cycle-*.md
+
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# ── Node (if using any JS tooling) ──────────────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ── OS artefacts ────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE / editor ────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Logs ────────────────────────────────────────────────────────────────────
+*.log
+logs/
