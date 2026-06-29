@@ -1,0 +1,196 @@
+# GoPhish Setup Guide
+
+This directory contains the GoPhish server configuration for Internee.pk's phishing simulation program.
+
+---
+
+## Prerequisites
+
+- A dedicated Linux VM or server (Ubuntu 20.04+ recommended) **not** on production infrastructure
+- A registered sending domain (or subdomain) for test emails — e.g., `phishtest.internee.internal`
+- SPF and DKIM records configured for the sending domain
+- SSL certificates for the admin dashboard (self-signed is fine for localhost-only access)
+- Port `3333` open to your admin IP only; port `8080` (or 443) open to recipients
+
+---
+
+## Step 1 — Download GoPhish
+
+```bash
+# Check https://github.com/gophish/gophish/releases for the latest version
+GOPHISH_VERSION="0.12.1"
+wget https://github.com/gophish/gophish/releases/download/v${GOPHISH_VERSION}/gophish-v${GOPHISH_VERSION}-linux-64bit.zip
+
+# Verify checksum (compare against the SHA256 published on the GitHub release page)
+sha256sum gophish-v${GOPHISH_VERSION}-linux-64bit.zip
+
+# Extract to /opt
+unzip gophish-v${GOPHISH_VERSION}-linux-64bit.zip -d /opt/gophish
+chmod +x /opt/gophish/gophish
+```
+
+---
+
+## Step 2 — Configure the Server
+
+Copy `config.json` from this directory to `/opt/gophish/config.json`:
+
+```bash
+cp gophish/config.json /opt/gophish/config.json
+```
+
+Edit the file and review these key settings:
+
+| Setting | Default | What to change |
+|---|---|---|
+| `admin_server.listen_url` | `127.0.0.1:3333` | Change `127.0.0.1` to your VM's private IP if accessing remotely over a VPN |
+| `phish_server.listen_url` | `0.0.0.0:8080` | Change the port to `443` if using HTTPS for landing pages (recommended) |
+| `phish_server.use_tls` | `false` | Set `true` if serving landing pages over HTTPS |
+| `cert_path` / `key_path` | See below | Path to your SSL certificate and key |
+
+---
+
+## Step 3 — Generate SSL Certificates
+
+### Admin dashboard (localhost / VPN only — self-signed is fine)
+```bash
+cd /opt/gophish
+openssl req -newkey rsa:2048 -nodes \
+  -keyout gophish_admin.key \
+  -x509 -days 365 \
+  -out gophish_admin.crt \
+  -subj "/CN=gophish-admin"
+```
+
+### Phish server (use a CA-signed cert if possible)
+```bash
+openssl req -newkey rsa:2048 -nodes \
+  -keyout gophish_phish.key \
+  -x509 -days 365 \
+  -out gophish_phish.crt \
+  -subj "/CN=phishtest.internee.internal"
+```
+
+> For a real certificate, use [Let's Encrypt](https://letsencrypt.org/) via Certbot if the phish server is publicly reachable.
+
+---
+
+## Step 4 — Start GoPhish
+
+```bash
+cd /opt/gophish
+./gophish
+```
+
+On first run, GoPhish prints a temporary admin password to stdout:
+
+```
+time="..." level=info msg="Please login with the username admin and the password <RANDOM_PASSWORD>"
+```
+
+Open `https://<your-server>:3333` in a browser, log in with `admin` / `<RANDOM_PASSWORD>`, and **immediately change the password** under Account Settings.
+
+---
+
+## Step 5 — Configure a Sending Profile
+
+In the GoPhish dashboard:
+
+1. Go to **Sending Profiles → New Profile**
+2. Fill in:
+
+| Field | Value |
+|---|---|
+| **Name** | `Internee.pk Test SMTP` |
+| **From** | `IT Helpdesk <it-helpdesk@[your-test-domain]>` |
+| **Host** | `smtp.[your-smtp-provider]:[port]` |
+| **Username** | _(your test mailbox username)_ |
+| **Password** | _(your test mailbox app password)_ |
+| **Ignore Certificate Errors** | Only if using a self-signed SMTP cert in dev |
+
+3. Click **Send Test Email** to verify delivery before building any campaign.
+
+> **Never use a production executive mailbox as the sending address.** Use a purpose-created test mailbox tied to the test domain.
+
+---
+
+## Step 6 — Import User Groups
+
+Use the script in `scripts/import_users.py` or manually via the GoPhish UI:
+
+**GoPhish UI:**  
+Users & Groups → New Group → Import CSV
+
+**CSV format** (see `campaigns/target-list-sample.csv`):
+```csv
+First Name,Last Name,Email,Position
+Ali,Ahmed,ali.ahmed@internee.pk,Finance
+Sara,Khan,sara.khan@internee.pk,Engineering
+```
+
+Create one group per department so results can be broken down by team.
+
+---
+
+## Step 7 — Load Email Templates & Landing Pages
+
+1. Upload templates from `templates/email/` via **Email Templates → New Template → Import Email**
+2. Upload landing pages from `templates/landing-pages/` via **Landing Pages → New Page**
+   - Enable **Capture Submitted Data**
+   - Enable **Redirect To** → URL of the post-click explainer page
+   - **Do NOT enable "Capture Passwords"** — this ensures no real credentials are stored
+
+---
+
+## Step 8 — Create & Launch a Campaign
+
+1. **Campaigns → New Campaign**
+2. Set fields using `campaigns/wave-1-config.json` as a reference
+3. Set a **staggered send window** (e.g., "Send Emails By: 3 hours after start") to avoid a simultaneous inbox flood
+4. Click **Launch Campaign**
+5. Monitor the live timeline on the campaign dashboard
+
+---
+
+## Step 9 — Export Results
+
+```bash
+python scripts/export_results.py \
+  --api-key YOUR_API_KEY \
+  --host https://localhost:3333 \
+  --campaign-id 1 \
+  --output results/wave-1.csv
+```
+
+Then generate the report:
+```bash
+python scripts/generate_report.py \
+  --results results/wave-1.csv \
+  --output reports/wave-1-report.md
+```
+
+---
+
+## GoPhish API Key
+
+Find your API key in GoPhish under **Account Settings → API Key**. Pass it as `--api-key` to the helper scripts, or set it as an environment variable:
+
+```bash
+export GOPHISH_API_KEY="your_key_here"
+```
+
+---
+
+## Firewall Recommendations
+
+```bash
+# Admin dashboard — allow only your IP / VPN
+ufw allow from <YOUR_ADMIN_IP> to any port 3333
+
+# Phish server — allow from internet (employees' mail clients)
+ufw allow 8080/tcp   # or 443 if using HTTPS
+
+# Block everything else
+ufw default deny incoming
+ufw enable
+```
